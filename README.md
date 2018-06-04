@@ -4,6 +4,12 @@ This repository doesn't contain any TR51 data, except for small samples for test
 
 Documentation on [godoc](https://godoc.org/github.com/samthor/tr51).
 
+## Extras
+
 See [demo](demo) for a demo which prints all emoji.
+
+The [emoji](emoji) package contains high-level normalization and helper code.
+
+## License
 
 Released under [Apache-2.0](LICENSE).
