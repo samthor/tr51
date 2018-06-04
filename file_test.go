@@ -16,7 +16,7 @@ func TestReader(t *testing.T) {
 
 	var count, emoji int
 	reader := bytes.NewBuffer(raw)
-	err := Reader(reader, func(l Line) error {
+	err := ReadFunc(reader, func(l Line) error {
 		if l.HasEmoji() {
 			emoji += 1
 		}

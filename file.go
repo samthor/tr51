@@ -4,31 +4,19 @@ import (
 	"bufio"
 	"bytes"
 	"io"
-	"os"
 )
 
-// Reader reads an io.Reader and passes each Line to the specified method.
-func Reader(r io.Reader, fn func(Line) error) error {
-	rd := bufio.NewReader(r)
-
+// ReadFunc reads an io.Reader and passes each Line to the specified method.
+func ReadFunc(r io.Reader, fn func(Line) error) error {
+	er := NewReader(r)
 	for {
-		raw, _, err := rd.ReadLine()
+		line, err := er.Read()
 		if err == io.EOF {
 			return nil
 		} else if err != nil {
 			return err
 		}
-
-		raw = bytes.TrimSpace(raw)
-		if len(raw) == 0 {
-			continue // blank
-		}
-
-		out, err := Parse(raw)
-		if err != nil {
-			return err
-		}
-		err = fn(out)
+		err = fn(line)
 		if err != nil {
 			return err
 		}
@@ -36,12 +24,30 @@ func Reader(r io.Reader, fn func(Line) error) error {
 	return nil
 }
 
-// File reads a file and passes each Line to the specified method.
-func File(p string, fn func(Line) error) error {
-	file, err := os.Open(p)
-	if err != nil {
-		return err
+// Reader allows reading of TR51 data.
+type Reader struct {
+	r *bufio.Reader
+}
+
+// NewReader returns a new Reader for TR51 data.
+func NewReader(r io.Reader) *Reader {
+	return &Reader{bufio.NewReader(r)}
+}
+
+// Read returns the next line of TR51 data. If no line is available, returns an error.
+func (r *Reader) Read() (Line, error) {
+	var empty Line
+
+	for {
+		raw, _, err := r.r.ReadLine()
+		if err != nil {
+			return empty, err // including io.EOF
+		}
+		raw = bytes.TrimSpace(raw)
+		if len(raw) > 0 {
+			return Parse(raw)
+		}
 	}
-	defer file.Close()
-	return Reader(file, fn)
+
+	return empty, io.EOF
 }
