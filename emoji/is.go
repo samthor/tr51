@@ -1,10 +1,12 @@
 package emoji
 
 const (
-	runeZWJ       = 0x200d
-	runeCap       = 0x20e3
-	runeVS16      = 0xfe0f
-	runeTagCancel = 0xe007f
+	runeZWJ          = 0x200d
+	runeCap          = 0x20e3
+	runeVS16         = 0xfe0f
+	runeTagCancel    = 0xe007f
+	runeGenderFemale = 0x2640
+	runeGenderMale   = 0x2642
 )
 
 // IsFlagPart returns whether the passed rune is part of a flag.
@@ -15,6 +17,11 @@ func IsFlagPart(r rune) bool {
 // IsSkinTone returns whether the passed rune is a Fitzpatrick skin tone modifier.
 func IsSkinTone(r rune) bool {
 	return r >= 0x1f3fb && r <= 0x1f3ff
+}
+
+// IsGender returns whether the passed rune is a gender symbol.
+func IsGender(r rune) bool {
+	return r == runeGenderFemale || r == runeGenderMale
 }
 
 // IsBeforeCap returns whether the passed rune can appear before a keycap.

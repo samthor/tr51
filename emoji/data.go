@@ -6,8 +6,6 @@ import (
 	"github.com/samthor/tr51"
 )
 
-// TODO(samthor): Support extended flag types, like England/Scotland/Wales.
-
 type emojiData struct {
 	unqualified  bool // whether this needs VS16
 	modifierBase bool // whether this can be modified
@@ -67,7 +65,7 @@ func (ed *Data) Normalize(raw string) string {
 			// TODO(samthor): Optionally retain this if Emoji_Modifier_Base.
 			// remove skin tone
 			continue
-		} else if r == 0x2640 || r == 0x2642 {
+		} else if IsGender(r) {
 			// remove gender modifiers
 			l := len(pending)
 			if pending[l-1] == runeZWJ {
