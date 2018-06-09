@@ -52,8 +52,18 @@ func NewData(r *tr51.Reader) (*Data, error) {
 	return &Data{m}, nil
 }
 
+// StripOpts controls what Normalize will strip.
+type StripOpts struct {
+	Tone   bool
+	Gender bool
+}
+
+var (
+	emptyOpts = &StripOpts{}
+)
+
 // Normalize returns only the emoji parts of the passed string.
-func (ed *Data) Normalize(raw string) string {
+func (ed *Data) Normalize(raw string, opts StripOpts) string {
 	pending := []rune{0}
 
 	// #1: Remove VS16 and other modifiers.
@@ -62,10 +72,17 @@ func (ed *Data) Normalize(raw string) string {
 			// remove VS16
 			continue
 		} else if IsSkinTone(r) {
-			// TODO(samthor): Optionally retain this if Emoji_Modifier_Base.
-			// remove skin tone
+			if opts.Tone {
+				// strip without checking
+				continue
+			}
+			l := len(pending)
+			if d, ok := ed.emoji[pending[l-1]]; ok && d.modifierBase {
+				// great, skin tone is valid here
+				pending = append(pending, r)
+			}
 			continue
-		} else if IsGender(r) {
+		} else if IsGender(r) && opts.Gender {
 			// remove gender modifiers
 			l := len(pending)
 			if pending[l-1] == runeZWJ {
@@ -76,12 +93,14 @@ func (ed *Data) Normalize(raw string) string {
 		}
 		pending = append(pending, r)
 	}
+	pending = append(pending, 0)
 
 	// #2: Iterate chars, removing non-emoji.
-	out := make([]rune, 0, len(pending))
+	lp := len(pending) - 1
+	out := make([]rune, 0, lp)
 	var pendingZWJ int
 	var allowZWJ int
-	for i := 1; i < len(pending); i++ {
+	for i := 1; i < lp; i++ {
 		r := pending[i]
 		if r == runeZWJ {
 			if allowZWJ == i {
@@ -121,8 +140,21 @@ func (ed *Data) Normalize(raw string) string {
 			out = append(out, runeTagCancel)
 		}
 
+		if IsSkinTone(r) {
+			// skin tone counts as a VS16, so look for a previous tone
+			allowZWJ = i + 1
+			l := len(out)
+			if out[l-1] == runeVS16 {
+				out[l-1] = r
+				continue
+			}
+			out = append(out, r)
+			continue
+		}
+
 		if IsFlagPart(r) {
-			// just allow if flag
+			// just allow
+			// TODO(samthor): Are these part of the data? Do we need this branch?
 			out = append(out, r)
 			continue
 		}
@@ -134,6 +166,10 @@ func (ed *Data) Normalize(raw string) string {
 
 			out = append(out, r)
 			if d.unqualified {
+				if IsSkinTone(pending[i+1]) {
+					// do nothing as this acts as a VS16
+					continue
+				}
 				// stick a VS16 on the end
 				out = append(out, runeVS16)
 			}
