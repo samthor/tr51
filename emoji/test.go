@@ -8,8 +8,9 @@ import (
 )
 
 type emojiTest struct {
-	notes    string
-	subgroup string
+	qualified string
+	notes     string
+	subgroup  string
 }
 
 type subgroupTest struct {
@@ -70,13 +71,20 @@ func NewTest(r *tr51.Reader) (*Test, error) {
 
 		// non-fully-qualified normally succeeds fully-qualified, but old versions don't always have it
 		seq := l.AsSequence()
-		s := tr51.Unqualify(string(seq))
+		qualified := string(seq)
+		s := tr51.Unqualify(qualified)
 		if _, ok := t.emoji[s]; ok {
 			continue
 		}
 		st := t.subgroup(subgroup, group)
 		st.emoji = append(st.emoji, s)
-		t.emoji[s] = emojiTest{l.Notes, subgroup}
+
+		test := emojiTest{notes: l.Notes, subgroup: subgroup}
+		if s != qualified {
+			// safe if not the same
+			test.qualified = qualified
+		}
+		t.emoji[s] = test
 	}
 
 	return t, nil
