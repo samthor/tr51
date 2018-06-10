@@ -22,8 +22,9 @@ type subgroupTest struct {
 type Test struct {
 	emoji map[string]emojiTest
 
-	groups    map[string][]string      // groups to subgroups
-	subgroups map[string]*subgroupTest // subgroups to emoji
+	groups        map[string][]string      // groups to subgroups
+	subgroups     map[string]*subgroupTest // subgroups to emoji
+	subgroupOrder []string
 }
 
 func (t *Test) subgroup(name, group string) *subgroupTest {
@@ -31,6 +32,7 @@ func (t *Test) subgroup(name, group string) *subgroupTest {
 	if out == nil {
 		out = &subgroupTest{group: group}
 		t.subgroups[name] = out
+		t.subgroupOrder = append(t.subgroupOrder, name)
 	}
 	return out
 }
@@ -88,6 +90,40 @@ func NewTest(r *tr51.Reader) (*Test, error) {
 	}
 
 	return t, nil
+}
+
+// TestEach contains data about each emoji.
+type TestEach struct {
+	Emoji    string
+	Notes    string
+	Group    string
+	Subgroup string
+}
+
+// Each enumerates through all found emoji in Test.
+func (t *Test) TestEach(fn func(*TestEach)) {
+	var each TestEach
+
+	// nb. we order by subgroupOrder to provide consistent ordering through file
+	for _, subgroup := range t.subgroupOrder {
+		st := t.subgroups[subgroup]
+		for _, emoji := range st.emoji {
+			test := t.emoji[emoji]
+
+			each.Emoji = test.qualified
+			if each.Emoji == "" {
+				each.Emoji = emoji
+			}
+
+			each.Notes = test.notes
+
+			st := t.subgroups[test.subgroup]
+			each.Group = st.group
+			each.Subgroup = test.subgroup
+
+			fn(&each)
+		}
+	}
 }
 
 // Split splits an input string into component emoji. Assumes the input is well-formed.
