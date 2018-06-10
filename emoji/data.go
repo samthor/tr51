@@ -73,6 +73,20 @@ func (ed *Data) Strip(raw string) string {
 func (ed *Data) Normalize(raw string, opts StripOpts) string {
 	pending := []rune{0}
 
+	// #0: Special-case single rune tone modifiers, which appear in test data.
+	var singleTone bool
+	for i, r := range raw {
+		if i == 0 && IsSkinTone(r) {
+			singleTone = true
+		} else {
+			singleTone = false
+			break
+		}
+	}
+	if singleTone {
+		return raw
+	}
+
 	// #1: Remove VS16 and other modifiers.
 	for _, r := range raw {
 		if r == runeVS16 {
