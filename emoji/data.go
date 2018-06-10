@@ -59,8 +59,13 @@ type StripOpts struct {
 }
 
 var (
-	emptyOpts = &StripOpts{}
+	stripAll = StripOpts{Tone: true, Gender: true}
 )
+
+// Strip returns all the emoji parts of the passed string, removing tone and gender.
+func (ed *Data) Strip(raw string) string {
+	return ed.Normalize(raw, stripAll)
+}
 
 // Normalize returns only the emoji parts of the passed string.
 func (ed *Data) Normalize(raw string, opts StripOpts) string {
