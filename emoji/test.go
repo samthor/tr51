@@ -2,19 +2,48 @@ package emoji
 
 import (
 	"io"
+	"strings"
 
 	"github.com/samthor/tr51"
 )
 
+type emojiTest struct {
+	notes    string
+	subgroup string
+}
+
+type subgroupTest struct {
+	group string
+	emoji []string
+}
+
 // Test wraps parsed data from emoji-test.txt.
 type Test struct {
-	emoji map[string]string
+	emoji map[string]emojiTest
+
+	groups    map[string][]string      // groups to subgroups
+	subgroups map[string]*subgroupTest // subgroups to emoji
+}
+
+func (t *Test) subgroup(name, group string) *subgroupTest {
+	out := t.subgroups[name]
+	if out == nil {
+		out = &subgroupTest{group: group}
+		t.subgroups[name] = out
+	}
+	return out
 }
 
 // NewTest returns a new Test struct, which helps match complex emoji parts. Expects emoji-test.txt
 // from Emoji 4.0+.
 func NewTest(r *tr51.Reader) (*Test, error) {
-	m := make(map[string]string)
+	t := &Test{
+		emoji:     make(map[string]emojiTest),
+		groups:    make(map[string][]string),
+		subgroups: make(map[string]*subgroupTest),
+	}
+
+	var group, subgroup string
 	for {
 		l, err := r.Read()
 		if err == io.EOF {
@@ -24,16 +53,33 @@ func NewTest(r *tr51.Reader) (*Test, error) {
 		}
 
 		if !l.HasEmoji() {
+			parts := strings.Split(l.Notes, ": ")
+			if len(parts) != 2 {
+				continue
+			}
+			switch parts[0] {
+			case "group":
+				group = parts[1]
+				subgroup = ""
+			case "subgroup":
+				subgroup = parts[1]
+				t.groups[group] = append(t.groups[group], subgroup)
+			}
 			continue
 		}
 
 		// non-fully-qualified normally succeeds fully-qualified, but old versions don't always have it
 		seq := l.AsSequence()
 		s := tr51.Unqualify(string(seq))
-		m[s] = l.Notes
+		if _, ok := t.emoji[s]; ok {
+			continue
+		}
+		st := t.subgroup(subgroup, group)
+		st.emoji = append(st.emoji, s)
+		t.emoji[s] = emojiTest{l.Notes, subgroup}
 	}
 
-	return &Test{m}, nil
+	return t, nil
 }
 
 // Split splits an input string into component emoji. Assumes the input is well-formed.
@@ -90,5 +136,5 @@ func (t *Test) Split(s string) []string {
 
 // Name returns the name for a single emoji. An empty name means there's no match.
 func (t *Test) Name(s string) string {
-	return t.emoji[tr51.Unqualify(s)]
+	return t.emoji[tr51.Unqualify(s)].notes
 }

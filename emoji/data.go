@@ -7,8 +7,9 @@ import (
 )
 
 type emojiData struct {
-	unqualified  bool // whether this needs VS16
-	modifierBase bool // whether this can be modified
+	unqualified  bool    // whether this needs VS16
+	modifierBase bool    // whether this can be modified
+	version      float32 // unicode version from
 }
 
 // Data wraps parsed data from emoji-data.txt.
@@ -36,6 +37,7 @@ func NewData(r *tr51.Reader) (*Data, error) {
 			for r := low; r <= high; r++ {
 				v := m[r]
 				v.unqualified = isEmoji
+				v.version = l.Version
 				m[r] = v
 			}
 		}
