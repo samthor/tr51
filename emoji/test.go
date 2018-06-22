@@ -22,7 +22,8 @@ type subgroupTest struct {
 type Test struct {
 	emoji map[string]emojiTest
 
-	groups        map[string][]string      // groups to subgroups
+	groups        map[string][]string // groups to subgroups
+	groupOrder    []string
 	subgroups     map[string]*subgroupTest // subgroups to emoji
 	subgroupOrder []string
 }
@@ -64,6 +65,8 @@ func NewTest(r *tr51.Reader) (*Test, error) {
 			case "group":
 				group = parts[1]
 				subgroup = ""
+				t.groups[group] = nil
+				t.groupOrder = append(t.groupOrder, group)
 			case "subgroup":
 				subgroup = parts[1]
 				t.groups[group] = append(t.groups[group], subgroup)
@@ -98,6 +101,13 @@ type TestEach struct {
 	Notes    string
 	Group    string
 	Subgroup string
+}
+
+func (t *Test) GroupEach(fn func(string, []string)) {
+	// TODO: better/formatted names?
+	for _, group := range t.groupOrder {
+		fn(group, t.groups[group])
+	}
 }
 
 // Each enumerates through all found emoji in Test.
