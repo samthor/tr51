@@ -10,44 +10,27 @@ import (
 type emojiTest struct {
 	qualified string
 	notes     string
-	subgroup  string
 }
 
-type subgroupTest struct {
-	group string
+type groupInfo struct {
+	name  string
 	emoji []string
 }
 
 // Test wraps parsed data from emoji-test.txt.
 type Test struct {
-	emoji map[string]emojiTest
-
-	groups        map[string][]string // groups to subgroups
-	groupOrder    []string
-	subgroups     map[string]*subgroupTest // subgroups to emoji
-	subgroupOrder []string
-}
-
-func (t *Test) subgroup(name, group string) *subgroupTest {
-	out := t.subgroups[name]
-	if out == nil {
-		out = &subgroupTest{group: group}
-		t.subgroups[name] = out
-		t.subgroupOrder = append(t.subgroupOrder, name)
-	}
-	return out
+	emoji  map[string]emojiTest
+	groups []*groupInfo
 }
 
 // NewTest returns a new Test struct, which helps match complex emoji parts. Expects emoji-test.txt
 // from Emoji 4.0+.
 func NewTest(r *tr51.Reader) (*Test, error) {
 	t := &Test{
-		emoji:     make(map[string]emojiTest),
-		groups:    make(map[string][]string),
-		subgroups: make(map[string]*subgroupTest),
+		emoji: make(map[string]emojiTest),
 	}
 
-	var group, subgroup string
+	var currentGroup *groupInfo
 	for {
 		l, err := r.Read()
 		if err == io.EOF {
@@ -63,13 +46,8 @@ func NewTest(r *tr51.Reader) (*Test, error) {
 			}
 			switch parts[0] {
 			case "group":
-				group = parts[1]
-				subgroup = ""
-				t.groups[group] = nil
-				t.groupOrder = append(t.groupOrder, group)
-			case "subgroup":
-				subgroup = parts[1]
-				t.groups[group] = append(t.groups[group], subgroup)
+				currentGroup = &groupInfo{name: parts[1]}
+				t.groups = append(t.groups, currentGroup)
 			}
 			continue
 		}
@@ -77,19 +55,14 @@ func NewTest(r *tr51.Reader) (*Test, error) {
 		// non-fully-qualified normally succeeds fully-qualified, but old versions don't always have it
 		seq := l.AsSequence()
 		qualified := string(seq)
-		s := tr51.Unqualify(qualified)
-		if _, ok := t.emoji[s]; ok {
+		unqualified := tr51.Unqualify(qualified)
+		if _, ok := t.emoji[unqualified]; ok {
 			continue
 		}
-		st := t.subgroup(subgroup, group)
-		st.emoji = append(st.emoji, s)
 
-		test := emojiTest{notes: l.Notes, subgroup: subgroup}
-		if s != qualified {
-			// safe if not the same
-			test.qualified = qualified
-		}
-		t.emoji[s] = test
+		test := emojiTest{notes: l.Notes, qualified: qualified}
+		t.emoji[unqualified] = test
+		currentGroup.emoji = append(currentGroup.emoji, unqualified)
 	}
 
 	return t, nil
@@ -97,39 +70,32 @@ func NewTest(r *tr51.Reader) (*Test, error) {
 
 // TestEach contains data about each emoji.
 type TestEach struct {
-	Emoji    string
-	Notes    string
-	Group    string
-	Subgroup string
+	Emoji string
+	Notes string
+	Group string
 }
 
-func (t *Test) GroupEach(fn func(string, []string)) {
-	// TODO: better/formatted names?
-	for _, group := range t.groupOrder {
-		fn(group, t.groups[group])
+// Groups returns an array of the groups inside the TR51 data.
+func (t *Test) Groups() []string {
+	out := make([]string, 0, len(t.groups))
+	for _, gi := range t.groups {
+		out = append(out, gi.name)
 	}
+	return out
 }
 
 // Each enumerates through all found emoji in Test.
 func (t *Test) TestEach(fn func(*TestEach)) {
 	var each TestEach
 
-	// nb. we order by subgroupOrder to provide consistent ordering through file
-	for _, subgroup := range t.subgroupOrder {
-		st := t.subgroups[subgroup]
-		for _, emoji := range st.emoji {
+	// nb. we use group to provide consistent ordering through file
+	for _, gi := range t.groups {
+		for _, emoji := range gi.emoji {
 			test := t.emoji[emoji]
 
 			each.Emoji = test.qualified
-			if each.Emoji == "" {
-				each.Emoji = emoji
-			}
-
 			each.Notes = test.notes
-
-			st := t.subgroups[test.subgroup]
-			each.Group = st.group
-			each.Subgroup = test.subgroup
+			each.Group = gi.name
 
 			fn(&each)
 		}
