@@ -11,6 +11,11 @@ const (
 	runeBlackFlag    = 0x1f3f4
 )
 
+// IsPerson returns whether this is the man/woman emoji.
+func IsPerson(r rune) bool {
+	return r == 0x1f468 || r == 0x1f469
+}
+
 // IsFlagPart returns whether the passed rune is part of a flag made up of A-Z chars.
 func IsFlagPart(r rune) bool {
 	return r >= 0x1f1e6 && r <= 0x1f1ff
