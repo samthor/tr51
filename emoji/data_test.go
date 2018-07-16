@@ -26,7 +26,7 @@ func TestData(t *testing.T) {
 	r := tr51.NewReader(bytes.NewBuffer([]byte(raw)))
 	ed, err := NewData(r)
 	if err != nil {
-		t.Fatalf("couldn't BuildEmojiData: %v", err)
+		t.Fatalf("couldn't NewData: %v", err)
 	}
 
 	type testData struct {

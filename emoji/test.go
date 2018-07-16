@@ -62,7 +62,9 @@ func NewTest(r *tr51.Reader) (*Test, error) {
 
 		test := emojiTest{notes: l.Notes, qualified: qualified}
 		t.emoji[unqualified] = test
-		currentGroup.emoji = append(currentGroup.emoji, unqualified)
+		if currentGroup != nil {
+			currentGroup.emoji = append(currentGroup.emoji, unqualified)
+		}
 	}
 
 	return t, nil
