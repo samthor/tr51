@@ -15,6 +15,7 @@ func TestProfession(t *testing.T) {
 		{"🏴󠁧󠁢󠁳󠁣󠁴󠁿", ""},
 		{"👮🏿", ""},
 		{"👩🏿‍🚒", "🚒"},
+		{"👨‍🚒", "🚒"},
 	}
 	for _, td := range data {
 		actual := ProfessionFor(td.in)
