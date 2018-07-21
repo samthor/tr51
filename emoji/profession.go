@@ -1,30 +1,30 @@
 package emoji
 
-// ProfessionFor returns the profession suffix for a profession emoji, or zero if none.
-func ProfessionFor(s string) rune {
-	out := make([]rune, 0, 2)
+// ProfessionFor returns the profession suffix for a profession emoji, or the empty string if none.
+func ProfessionFor(s string) string {
+	cut := -1
 
 	for i, r := range s {
 		if i == 0 {
 			if !IsPerson(r) {
-				return 0
+				return ""
 			}
-			continue
-		} else if i == 1 && IsSkinTone(r) {
-			continue
-		} else if r == runeVS16 {
-			continue
+		} else if r >= 0x1f466 && r <= 0x1f469 {
+			// this is a family
+			return ""
+		} else if r == runeZWJ {
+			if cut != -1 {
+				return "" // only one ZWJ expected
+			}
+			cut = 0
+		} else if cut == 0 {
+			cut = i // cut is "at next position"
 		}
-		out = append(out, r)
 	}
 
-	if len(out) != 2 || out[0] != runeZWJ {
-		return 0
+	if cut <= 0 {
+		return ""
 	}
 
-	cand := out[1]
-	if cand >= 0x1f466 && cand <= 0x1f469 {
-		return 0 // this is a family
-	}
-	return cand
+	return s[cut:]
 }
