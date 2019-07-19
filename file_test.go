@@ -18,9 +18,9 @@ func TestReader(t *testing.T) {
 	reader := bytes.NewBuffer(raw)
 	err := ReadFunc(reader, func(l Line) error {
 		if l.HasEmoji() {
-			emoji += 1
+			emoji++
 		}
-		count += 1
+		count++
 		return nil
 	})
 	if err != nil {

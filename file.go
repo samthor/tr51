@@ -21,7 +21,6 @@ func ReadFunc(r io.Reader, fn func(Line) error) error {
 			return err
 		}
 	}
-	return nil
 }
 
 // Reader allows reading of TR51 data.
@@ -48,6 +47,4 @@ func (r *Reader) Read() (Line, error) {
 			return Parse(raw)
 		}
 	}
-
-	return empty, io.EOF
 }

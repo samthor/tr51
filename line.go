@@ -3,7 +3,6 @@ package tr51
 import (
 	"bytes"
 	"errors"
-	"log"
 	"strconv"
 	"unicode"
 )
@@ -16,8 +15,12 @@ var (
 	escapedPrefix   = []byte(`\x`)
 	versionNAPrefix = []byte("NA ")
 
-	ErrInvalidRange  = errors.New("invalid emoji range")
-	ErrInvalidPoints = errors.New("invalid emoji point(s)")
+	// ErrInvalidRange indicates bad TR51 data.
+	ErrInvalidRange = errors.New("invalid emoji range")
+
+	// ErrUnhandledEscape indicates that an unhandled escape was reached.
+	// This library special-cases escapes as there's not many of them.
+	ErrUnhandledEscape = errors.New("unhandled \\x escape code")
 )
 
 // Line represents all possible raw line parts of a TR51 doc.
@@ -98,7 +101,7 @@ func Parse(line []byte) (out Line, err error) {
 	// TODO: should support \x{anything}
 	line = bytes.Replace(line, keycapEscaped, []byte{'#'}, -1)
 	if bytes.Index(line, escapedPrefix) != -1 {
-		log.Printf("got unhandled escape in line: %v", string(line))
+		return out, ErrUnhandledEscape
 	}
 
 	left := bytes.Split(line, propertiesSep)
@@ -178,7 +181,7 @@ func Parse(line []byte) (out Line, err error) {
 			hasEarlyBracket = true
 			break
 		}
-		if isAsciiLetter(rune(v)) {
+		if isASCIILetter(rune(v)) {
 			break
 		}
 	}
@@ -204,7 +207,7 @@ func Parse(line []byte) (out Line, err error) {
 	return out, nil
 }
 
-func isAsciiLetter(r rune) bool {
+func isASCIILetter(r rune) bool {
 	return (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z')
 }
 
