@@ -14,13 +14,16 @@ type emojiData struct {
 
 // Data wraps parsed data from emoji-data.txt.
 type Data struct {
-	emoji map[rune]emojiData
+	emoji       map[rune]emojiData
+	unqualified int
 }
 
 // NewData returns a new Data struct, which helps validate raw emoji parts. Expects emoji-data.txt
 // from Emoji 2.0+.
 func NewData(r *tr51.Reader) (*Data, error) {
 	m := make(map[rune]emojiData)
+	var unqualified int
+
 	for {
 		l, err := r.Read()
 		if err == io.EOF {
@@ -39,6 +42,12 @@ func NewData(r *tr51.Reader) (*Data, error) {
 				v.unqualified = isEmoji
 				v.version = l.Version
 				m[r] = v
+
+				if isEmoji {
+					unqualified++
+				} else {
+					unqualified--
+				}
 			}
 		}
 
@@ -51,7 +60,7 @@ func NewData(r *tr51.Reader) (*Data, error) {
 		}
 	}
 
-	return &Data{m}, nil
+	return &Data{m, unqualified}, nil
 }
 
 // StripOpts controls what Normalize will strip.
@@ -63,6 +72,18 @@ type StripOpts struct {
 var (
 	stripAll = StripOpts{Tone: true, Gender: true}
 )
+
+// Text returns emoji runes which need a trailing VS16.
+func (ed *Data) Text() []rune {
+	out := make([]rune, 0, ed.unqualified)
+	for r, data := range ed.emoji {
+		if data.unqualified {
+			out = append(out, r)
+		}
+	}
+	runeSlice(out).Sort()
+	return out
+}
 
 // Strip returns all the emoji parts of the passed string, removing tone and gender.
 func (ed *Data) Strip(raw string) string {

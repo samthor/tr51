@@ -86,7 +86,7 @@ func (t *Test) Groups() []string {
 	return out
 }
 
-// Each enumerates through all found emoji in Test.
+// TestEach enumerates through all found emoji in Test.
 func (t *Test) TestEach(fn func(*TestEach)) {
 	var each TestEach
 
@@ -105,6 +105,7 @@ func (t *Test) TestEach(fn func(*TestEach)) {
 }
 
 // Split splits an input string into component emoji. Assumes the input is well-formed.
+// This is only here so we can match valid flags.
 func (t *Test) Split(s string) []string {
 	var cands []string
 	var curr []rune
