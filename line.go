@@ -51,6 +51,11 @@ func (lp *Line) AsSequence() []rune {
 	return lp.Sequence
 }
 
+// AsString returns single or sequenced emoji as a string, or returns an empty stirng.
+func (lp *Line) AsString() string {
+	return string(lp.AsSequence())
+}
+
 // AsRange returns single or ranged emoji as a range.
 func (lp *Line) AsRange() (low, high rune) {
 	if lp.Single != 0 {
