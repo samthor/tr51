@@ -5,8 +5,12 @@ import (
 )
 
 const (
-	// VS16 is the "Variation Selector 16" character, commonly known as "emoji mode".
-	VS16 = "\ufe0f"
+	// VS16 is the "Variation Selector 16" rune, commonly known as "emoji mode".
+	VS16 = 0xfe0f
+)
+
+const (
+	stringVS16 = "\ufe0f"
 )
 
 // Origins converts a space-separated list of origins from the Emoji 1.0 data, to long-form text
@@ -35,5 +39,5 @@ func Origins(o string) []string {
 
 // Unqualify removes all VS16 charaters from the input string.
 func Unqualify(o string) string {
-	return strings.Replace(o, VS16, "", -1)
+	return strings.Replace(o, stringVS16, "", -1)
 }
