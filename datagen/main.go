@@ -11,16 +11,17 @@ import (
 	"github.com/samthor/tr51"
 )
 
+type emojiPart struct {
+	name         string
+	version      float32
+	modifierBase bool
+	presentation bool
+	profession   bool
+	role         bool
+	keycap       bool
+}
+
 func main() {
-	type emojiPart struct {
-		name         string
-		version      float32
-		modifierBase bool
-		presentation bool
-		profession   bool
-		role         bool
-		keycap       bool
-	}
 	type flagKey struct {
 		l, r rune
 	}
@@ -147,6 +148,12 @@ outer:
 		emojiParts[r] = ep
 	}
 
+	for _, r := range overrideControl() {
+		ep := emojiParts[r]
+		overrideEmojiPart(r, &ep)
+		emojiParts[r] = ep
+	}
+
 	count := func(pred func(emojiPart) bool) (out int) {
 		for r := range emojiParts {
 			if pred(emojiParts[r]) {
@@ -167,14 +174,18 @@ outer:
 	emojiPartAll.Sort()
 
 	var output struct {
-		professions []rune
-		roles       []rune
-		variation   []rune
-		flags       []rune
+		modifierBase []rune
+		professions  []rune
+		roles        []rune
+		variation    []rune
+		flags        []rune
 	}
 
 	for _, r := range emojiPartAll {
 		ep := emojiParts[r]
+		if ep.modifierBase {
+			output.modifierBase = append(output.modifierBase, r)
+		}
 		if ep.profession {
 			output.professions = append(output.professions, r)
 		}
@@ -192,11 +203,12 @@ outer:
 	// TODO(samthor): we need emoji-zwj-sequences.txt for coverage of unicode versions
 
 	fmt.Printf(`// Generated on %v
+export const modifierBase = "%s";
 export const professions = "%s";
 export const roles = "%s";
 export const variation = "%s";
 export const flags = "%s";
-`, time.Now(), string(output.professions), string(output.roles), string(output.variation), string(output.flags))
+`, time.Now(), string(output.modifierBase), string(output.professions), string(output.roles), string(output.variation), string(output.flags))
 }
 
 func isFlagPart(r rune) bool {
