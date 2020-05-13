@@ -106,6 +106,11 @@ outer:
 			}
 		}
 
+		// ... skip any which is a family
+		if isFamilyPoints(raw) {
+			continue outer
+		}
+
 		// 1) look for professions ("man firefighter", "woman firefighter")
 		if len(raw) == 3 && isGenderPerson(raw[0]) && raw[1] == 0x200d {
 			r = raw[2]
@@ -196,6 +201,7 @@ outer:
 			output.variation = append(output.variation, r)
 		}
 	}
+
 	for _, flag := range emojiFlags {
 		output.flags = append(output.flags, flag.l, flag.r)
 	}
@@ -225,6 +231,14 @@ func isGender(r rune) bool {
 
 func isSkinTone(r rune) bool {
 	return r >= 0x1f3fb && r <= 0x1f3ff
+}
+
+func isFamilyMember(r rune) bool {
+	return r >= 0x1f466 && r <= 0x1f469
+}
+
+func isFamilyPoints(all []rune) bool {
+	return len(all) >= 3 && isFamilyMember(all[0]) && all[1] == 0x200d && isFamilyMember(all[2])
 }
 
 func readTR51(filename string) *tr51.Reader {
