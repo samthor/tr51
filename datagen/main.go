@@ -27,7 +27,7 @@ func main() {
 	}
 	emojiParts := make(map[rune]emojiPart)
 	var emojiFlags []flagKey
-	var emojiOthers []string
+	var emojiZWJOthers [][]rune
 
 	// process single emoji data
 	dataReader := readTR51("emoji-data.txt")
@@ -137,8 +137,18 @@ outer:
 				'a' + (raw[1] - 0x1f1e6),
 			}
 			emojiFlags = append(emojiFlags, key)
-		} else if len(raw) > 1 {
-			emojiOthers = append(emojiOthers, string(raw))
+			continue
+		}
+
+		// 5) look for any other ZWJ emoji, with some hard-coded exceptions
+		if len(raw) > 1 {
+			// we catch any person-like here (kiss, holding hands)
+			for _, r := range raw {
+				if isGenderPerson(r) {
+					continue outer
+				}
+			}
+			emojiZWJOthers = append(emojiZWJOthers, raw)
 		}
 		continue
 
@@ -171,6 +181,8 @@ outer:
 	log.Printf("professions: %d", count(func(ep emojiPart) bool { return ep.profession }))
 	log.Printf("roles: %d", count(func(ep emojiPart) bool { return ep.role }))
 	log.Printf("keycaps: %d", count(func(ep emojiPart) bool { return ep.keycap }))
+	log.Printf("all parts: %d", len(emojiParts))
+	log.Printf("zwj others: %d", len(emojiZWJOthers))
 
 	emojiPartAll := make(runeSlice, 0, len(emojiParts))
 	for r := range emojiParts {
@@ -184,6 +196,8 @@ outer:
 		roles        []rune
 		variation    []rune
 		flags        []rune
+		zwjOther     []rune
+		parts        []rune
 	}
 
 	for _, r := range emojiPartAll {
@@ -200,21 +214,35 @@ outer:
 		if !ep.presentation {
 			output.variation = append(output.variation, r)
 		}
+		output.parts = append(output.parts, r)
 	}
 
 	for _, flag := range emojiFlags {
 		output.flags = append(output.flags, flag.l, flag.r)
 	}
+	for _, other := range emojiZWJOthers {
+		output.zwjOther = append(output.zwjOther, other...)
+	}
 
 	// TODO(samthor): we need emoji-zwj-sequences.txt for coverage of unicode versions
 
-	fmt.Printf(`// Generated on %v
-export const modifierBase = "%s";
-export const professions = "%s";
-export const roles = "%s";
-export const variation = "%s";
-export const flags = "%s";
-`, time.Now(), string(output.modifierBase), string(output.professions), string(output.roles), string(output.variation), string(output.flags))
+	type outputPair struct {
+		key   string
+		value []rune
+	}
+	outputPairs := []outputPair{
+		{key: "modifierBase", value: output.modifierBase},
+		{key: "professions", value: output.professions},
+		{key: "roles", value: output.roles},
+		{key: "variation", value: output.variation},
+		{key: "flags", value: output.flags},
+		{key: "zwjOther", value: output.zwjOther},
+		{key: "parts", value: output.parts},
+	}
+	fmt.Printf(`// Generated on %v\n`, time.Now())
+	for _, pair := range outputPairs {
+		fmt.Printf("export const %s = \"%s\";\n", pair.key, string(pair.value))
+	}
 }
 
 func isFlagPart(r rune) bool {
@@ -222,7 +250,7 @@ func isFlagPart(r rune) bool {
 }
 
 func isGenderPerson(r rune) bool {
-	return r == 0x1f468 || r == 0x1f469 // woman, man
+	return r == 0x1f468 || r == 0x1f469 || r == 0x1f9d1 // woman, man, person
 }
 
 func isGender(r rune) bool {
