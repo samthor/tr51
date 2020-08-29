@@ -65,20 +65,12 @@ func main() {
 		}
 	}
 
-	// process test data and find combinations
-	testReader := readTR51("emoji-test.txt")
-outer:
-	for {
-		l, err := testReader.Read()
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			log.Fatalf("could not read: %v", err)
-		}
+	// helper to process single
+	processTestSingle := func(l tr51.Line) {
 		if l.HasProperty("component") && l.Single != 0 {
 			// ok, we'll just name it
 		} else if !l.HasProperty("fully-qualified") {
-			continue
+			return
 		}
 
 		// ... yet unqualify it
@@ -102,13 +94,13 @@ outer:
 		// ... skip any with skin tone runes
 		for _, r := range raw {
 			if isSkinTone(r) {
-				continue outer
+				return
 			}
 		}
 
 		// ... skip any which is a family
 		if isFamilyPoints(raw) {
-			continue outer
+			return
 		}
 
 		// 1) look for professions ("man firefighter", "woman firefighter")
@@ -137,7 +129,7 @@ outer:
 				'a' + (raw[1] - 0x1f1e6),
 			}
 			emojiFlags = append(emojiFlags, key)
-			continue
+			return
 		}
 
 		// 5) look for any other ZWJ emoji, with some hard-coded exceptions
@@ -145,12 +137,12 @@ outer:
 			// we catch any person-like here (kiss, holding hands)
 			for _, r := range raw {
 				if isGenderPerson(r) {
-					continue outer
+					return
 				}
 			}
 			emojiZWJOthers = append(emojiZWJOthers, raw)
 		}
-		continue
+		return
 
 	update:
 		ep := emojiParts[r]
@@ -163,12 +155,28 @@ outer:
 		emojiParts[r] = ep
 	}
 
+	// process test data and find combinations
+	for _, src := range []string{"emoji-test.txt", "emoji-extra-test.txt"} {
+		testReader := readTR51(src)
+		for {
+			l, err := testReader.Read()
+			if err == io.EOF {
+				break
+			} else if err != nil {
+				log.Fatalf("could not read: %v", err)
+			}
+			processTestSingle(l)
+		}
+	}
+
+	// modifiy emoji bases that have incorrect properties
 	for _, r := range overrideControl() {
 		ep := emojiParts[r]
 		overrideEmojiPart(r, &ep)
 		emojiParts[r] = ep
 	}
 
+	// helper to match predicate and do counting
 	count := func(pred func(emojiPart) bool) (out int) {
 		for r := range emojiParts {
 			if pred(emojiParts[r]) {
