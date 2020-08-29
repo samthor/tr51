@@ -1,3 +1,4 @@
+// Package main of datagen generates processed emoji data as a ESM for JavaScript.
 package main
 
 import (
