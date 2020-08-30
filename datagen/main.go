@@ -19,6 +19,7 @@ type emojiPart struct {
 	presentation bool
 	profession   bool
 	role         bool
+	keycap       bool
 }
 
 func main() {
@@ -60,6 +61,10 @@ func main() {
 			ep.version = l.Version
 			ep.presentation = ep.presentation || isPresentation
 			ep.modifierBase = ep.modifierBase || isModifierBase
+
+			if r <= '9' {
+				ep.keycap = true
+			}
 
 			emojiParts[r] = ep
 		}
@@ -213,7 +218,9 @@ func main() {
 		if !ep.presentation {
 			output.variation = append(output.variation, r)
 		}
-		output.parts = append(output.parts, r)
+		if !ep.keycap {
+			output.parts = append(output.parts, r)
+		}
 	}
 
 	for _, flag := range emojiFlags {
