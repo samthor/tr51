@@ -238,7 +238,7 @@ func main() {
 		{key: "multi", value: output.multi},
 		{key: "parts", value: output.parts},
 	}
-	fmt.Printf(`// Generated on %v\n`, time.Now())
+	fmt.Printf("// Generated on %v\n", time.Now())
 	for _, pair := range outputPairs {
 		fmt.Printf("export const %s = \"%s\";\n", pair.key, string(pair.value))
 	}
