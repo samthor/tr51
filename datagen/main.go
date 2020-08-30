@@ -19,7 +19,6 @@ type emojiPart struct {
 	presentation bool
 	profession   bool
 	role         bool
-	keycap       bool
 }
 
 func main() {
@@ -28,7 +27,7 @@ func main() {
 	}
 	emojiParts := make(map[rune]emojiPart)
 	var emojiFlags []flagKey
-	var emojiZWJOthers [][]rune
+	var emojiMultiOthers [][]rune
 
 	// process single emoji data
 	dataReader := readTR51("emoji-data.txt")
@@ -84,7 +83,6 @@ func main() {
 		var name string
 		var isProfession bool
 		var isRole bool
-		var isKeycap bool
 
 		// 0) insert names
 		if len(raw) == 1 {
@@ -117,13 +115,7 @@ func main() {
 			goto update
 		}
 
-		// 3) look for keycaps
-		if len(raw) == 2 && raw[1] == 0x20e3 {
-			isKeycap = true
-			goto update
-		}
-
-		// 4) look for flags
+		// 3) look for flags
 		if len(raw) == 2 && isFlagPart(raw[0]) && isFlagPart(raw[1]) {
 			key := flagKey{
 				'a' + (raw[0] - 0x1f1e6),
@@ -133,7 +125,7 @@ func main() {
 			return
 		}
 
-		// 5) look for any other ZWJ emoji, with some hard-coded exceptions
+		// 4) look for any other ZWJ emoji, with some hard-coded exceptions
 		if len(raw) > 1 {
 			// we catch any person-like here (kiss, holding hands)
 			for _, r := range raw {
@@ -141,7 +133,7 @@ func main() {
 					return
 				}
 			}
-			emojiZWJOthers = append(emojiZWJOthers, raw)
+			emojiMultiOthers = append(emojiMultiOthers, raw)
 		}
 		return
 
@@ -152,7 +144,6 @@ func main() {
 		}
 		ep.profession = ep.profession || isProfession
 		ep.role = ep.role || isRole
-		ep.keycap = ep.keycap || isKeycap
 		emojiParts[r] = ep
 	}
 
@@ -189,9 +180,8 @@ func main() {
 
 	log.Printf("professions: %d", count(func(ep emojiPart) bool { return ep.profession }))
 	log.Printf("roles: %d", count(func(ep emojiPart) bool { return ep.role }))
-	log.Printf("keycaps: %d", count(func(ep emojiPart) bool { return ep.keycap }))
 	log.Printf("all parts: %d", len(emojiParts))
-	log.Printf("zwj others: %d", len(emojiZWJOthers))
+	log.Printf("multi others: %d", len(emojiMultiOthers))
 
 	emojiPartAll := make(runeSlice, 0, len(emojiParts))
 	for r := range emojiParts {
@@ -205,7 +195,7 @@ func main() {
 		roles        []rune
 		variation    []rune
 		flags        []rune
-		zwjOther     []rune
+		multi        []rune
 		parts        []rune
 	}
 
@@ -229,8 +219,8 @@ func main() {
 	for _, flag := range emojiFlags {
 		output.flags = append(output.flags, flag.l, flag.r)
 	}
-	for _, other := range emojiZWJOthers {
-		output.zwjOther = append(output.zwjOther, other...)
+	for _, other := range emojiMultiOthers {
+		output.multi = append(output.multi, other...)
 	}
 
 	// TODO(samthor): we need emoji-zwj-sequences.txt for coverage of unicode versions
@@ -245,7 +235,7 @@ func main() {
 		{key: "roles", value: output.roles},
 		{key: "variation", value: output.variation},
 		{key: "flags", value: output.flags},
-		{key: "zwjOther", value: output.zwjOther},
+		{key: "multi", value: output.multi},
 		{key: "parts", value: output.parts},
 	}
 	fmt.Printf(`// Generated on %v\n`, time.Now())
