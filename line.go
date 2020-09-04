@@ -150,7 +150,7 @@ func Parse(line []byte) (out Line, err error) {
 		return out, nil // weird, but possible
 	}
 
-	// strip V if it's part of version
+	// strip V or E if it's part of version
 	if comment[0] == 'V' && unicode.IsDigit(rune(comment[1])) {
 		comment = comment[1:]
 	}
@@ -207,6 +207,19 @@ func Parse(line []byte) (out Line, err error) {
 		notesFromIndex++
 	}
 	notes := bytes.TrimSpace(comment[notesFromIndex:])
+
+	if len(notes) > 2 && notes[0] == 'E' {
+		cand = numberPrefixOf(notes[1:])
+		if len(cand) > 0 {
+			v64, err := strconv.ParseFloat(string(cand), 32)
+			if err != nil {
+				return out, err
+			}
+			out.Version = float32(v64)
+			notes = bytes.TrimSpace(notes[len(cand)+1:])
+		}
+	}
+
 	out.Notes = string(notes)
 
 	return out, nil

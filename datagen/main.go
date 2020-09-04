@@ -12,6 +12,11 @@ import (
 	"github.com/samthor/tr51"
 )
 
+const (
+	// recordEmojiFrom records emoji from this Unicode version and above.
+	recordEmojiFrom = 11
+)
+
 type emojiPart struct {
 	name         string
 	version      float32
@@ -29,6 +34,8 @@ func main() {
 	emojiParts := make(map[rune]emojiPart)
 	var emojiFlags []flagKey
 	var emojiMultiOthers [][]rune
+
+	emojiAfter := map[int][]rune{}
 
 	// process single emoji data
 	dataReader := readTR51("emoji-data.txt")
@@ -64,10 +71,19 @@ func main() {
 
 			if r <= '9' {
 				ep.keycap = true
+				ep.presentation = true // don't specifically present keycaps, only in multi
 			}
 
 			emojiParts[r] = ep
 		}
+	}
+
+	maybeRecordEmojiFrom := func(raw []rune, version int) {
+		if version < recordEmojiFrom {
+			return
+		}
+		// record if we're "modern"
+		emojiAfter[version] = append(emojiAfter[version], raw...)
 	}
 
 	// helper to process single
@@ -79,10 +95,13 @@ func main() {
 		}
 
 		// ... yet unqualify it
-		raw := []rune(tr51.Unqualify(l.AsString()))
+		qualified := l.AsSequence()
+		raw := []rune(tr51.Unqualify(string(qualified)))
 		if len(raw) == 0 {
 			log.Fatalf("unqualified emoji is empty: %v", l.AsString())
 		}
+
+		version := int(l.Version)
 
 		r := raw[0]
 		var name string
@@ -139,10 +158,14 @@ func main() {
 				}
 			}
 			emojiMultiOthers = append(emojiMultiOthers, raw)
+			maybeRecordEmojiFrom(raw, version)
 		}
 		return
 
 	update:
+		maybeRecordEmojiFrom(raw, version)
+
+		// nb. at this point we're a single emoji rune
 		ep := emojiParts[r]
 		if name != "" {
 			ep.name = name
@@ -248,6 +271,16 @@ func main() {
 	fmt.Printf("// Generated on %v\n", time.Now())
 	for _, pair := range outputPairs {
 		fmt.Printf("export const %s = \"%s\";\n", pair.key, string(pair.value))
+	}
+
+	// This ends up rendering all of "MAN X", "WOMAN X", etc.
+	// TODO(samthor): Skips "people holding hands"
+	for version := recordEmojiFrom; len(emojiAfter) != 0; version++ {
+		next := emojiAfter[version]
+		delete(emojiAfter, version)
+		if len(next) > 0 {
+			fmt.Printf("export const unicode%d = \"%s\";\n", version, string(next))
+		}
 	}
 }
 
